@@ -1,4 +1,0 @@
-- add tests
-- inspect docs
-- think about consumption
-- re-think the design of #authenticate
