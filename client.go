@@ -124,6 +124,21 @@ func (c *Client) Authenticate(email string, password string) (*accessToken, erro
 	)
 }
 
+// func (c *Client) CreateAttack(ac AttackCommand, token accessToken) error {
+// rurl := c.resourceURL("attacks/new")
+//
+// jsonBody, err := json.Marshal(&ac)
+// if err != nil {
+// 	return fmt.Errorf("Failed to marshal attack command: %v", err)
+// }
+
+// create new request
+// add headers
+// ignore response body for now
+
+// return nil
+// }
+
 // resourceURL safely joins a string path (e.g. "my/resource") to an existing URL.
 func (c *Client) resourceURL(path string) *url.URL {
 	rel := &url.URL{Path: path}

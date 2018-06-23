@@ -1,6 +1,8 @@
 package gremlin
 
-import "time"
+import (
+	"time"
+)
 
 // accessToken represents the object returned by the Gremlin API when making an
 // authentication request.
