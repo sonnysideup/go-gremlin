@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,10 +20,12 @@ var (
 
 // Client manages communication with the Gremlin API
 type Client struct {
-	client *http.Client
-
-	Company string
-	BaseURL *url.URL
+	client   *http.Client
+	Company  string
+	BaseURL  *url.URL
+	Email    string
+	password string
+	token    *accessToken
 }
 
 // ConfigOption represents the type interface that can be used to add new
@@ -54,12 +55,15 @@ func WithNetClient(netClient *http.Client) ConfigOption {
 }
 
 // Generate a new Gremlin Client, populating the required fields.
-func NewClient(company string, options ...ConfigOption) *Client {
+func NewClient(company string, email string, password string, options ...ConfigOption) *Client {
 	// default client settings
 	client := &Client{
-		client:  defaultNetClient,
-		Company: company,
-		BaseURL: defaultBaseURL,
+		client:   defaultNetClient,
+		Company:  company,
+		BaseURL:  defaultBaseURL,
+		Email:    email,
+		password: password,
+		token:    &accessToken{},
 	}
 
 	// apply any functional options
@@ -69,6 +73,12 @@ func NewClient(company string, options ...ConfigOption) *Client {
 		}
 	}
 
+	token, err := client.authenticate(email, password)
+	if err != nil {
+		panic(err)
+	}
+
+	client.token = token
 	return client
 }
 
@@ -77,7 +87,7 @@ func NewClient(company string, options ...ConfigOption) *Client {
 //
 // All API requests require an access token so you'll need to provide one to all
 // other method invocations.
-func (c *Client) Authenticate(email string, password string) (*accessToken, error) {
+func (c *Client) authenticate(email string, password string) (*accessToken, error) {
 	rurl := c.resourceURL("users/auth")
 
 	// create request body and object
@@ -88,7 +98,7 @@ func (c *Client) Authenticate(email string, password string) (*accessToken, erro
 
 	req, err := http.NewRequest("POST", rurl.String(), strings.NewReader(form.Encode()))
 	if err != nil {
-		log.Fatalln("Failed to create new request obj:", err)
+		return nil, fmt.Errorf("Failed to create new request obj: %s", err.Error())
 	}
 
 	// set required header
@@ -97,18 +107,18 @@ func (c *Client) Authenticate(email string, password string) (*accessToken, erro
 	// dispatch request and check response status
 	resp, err := c.client.Do(req)
 	if err != nil {
-		log.Fatalln("Auth request failed:", err)
+		return nil, fmt.Errorf("Auth request failed: %s", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
-		log.Fatalf("Auth request failed: status: %d body: %s\n", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("Auth request failed: status: %d body: %s\n", resp.StatusCode, string(body))
 	}
 	defer resp.Body.Close()
 
 	// marshall JSON response into object
 	var tokens []accessToken
 	if err = json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
-		log.Fatalln("Failed to marshall response:", err)
+		return nil, fmt.Errorf("Failed to marshall response: %s", err.Error())
 	}
 
 	// search for required company token
@@ -118,10 +128,7 @@ func (c *Client) Authenticate(email string, password string) (*accessToken, erro
 		}
 	}
 
-	return nil, fmt.Errorf("Unable to find token for '%s'\nTokens returned: %+v\n",
-		c.Company,
-		tokens,
-	)
+	return nil, fmt.Errorf("Unable to find token for '%s'\nTokens returned: %+v\n", c.Company, tokens)
 }
 
 // func (c *Client) CreateAttack(ac AttackCommand, token accessToken) error {
