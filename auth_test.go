@@ -63,8 +63,14 @@ func TestNewClientWithInvalidURL(t *testing.T) {
 	t.Log("Creating client with a bad URL")
 
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected bad URL to cause panic")
+		r := recover()
+		if r != nil {
+			panicMessage := fmt.Sprintf("%v", r)
+			if got, want := panicMessage, "Request failed:"; !strings.Contains(got, want) {
+				t.Errorf("Expected panic message to contain %s, but got %s", want, got)
+			}
+		} else {
+			t.Error("Expected not real domain to throw panic.")
 		}
 	}()
 	email := "real-email@google.com"
