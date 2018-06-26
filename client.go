@@ -73,27 +73,21 @@ func NewClient(company string, email string, password string, options ...ConfigO
 		}
 	}
 
-	token, err := client.authenticate(email, password)
-	if err != nil {
-		panic(err)
-	}
-
-	client.token = token
 	return client
 }
 
-// Authenticate provides your user credentials to Gremlin and requests an access
-// token.
+// authenticate provides your user credentials to Gremlin and requests an access
+// token. If authentication is successful, this token will be stored in the client.
 //
-// All API requests require an access token so you'll need to provide one to all
-// other method invocations.
-func (c *Client) authenticate(email string, password string) (*accessToken, error) {
+// All other API requests require an access token so a token will be required
+// prior to invoking other methods.
+func (c *Client) authenticate() (*accessToken, error) {
 	rurl := c.resourceURL("users/auth")
 
 	// create request body and object
 	form := url.Values{}
-	form.Set("email", email)
-	form.Set("password", password)
+	form.Set("email", c.Email)
+	form.Set("password", c.password)
 	form.Set("companyName", c.Company)
 
 	req, err := http.NewRequest("POST", rurl.String(), strings.NewReader(form.Encode()))
@@ -124,6 +118,7 @@ func (c *Client) authenticate(email string, password string) (*accessToken, erro
 	// search for required company token
 	for _, t := range tokens {
 		if t.OrganizationName == c.Company {
+			c.token = &t
 			return &t, nil
 		}
 	}
