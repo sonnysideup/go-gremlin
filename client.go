@@ -121,33 +121,6 @@ func (c *Client) authenticate() (*accessToken, error) {
 	return nil, fmt.Errorf("Unable to find token for '%s'\nTokens returned: %+v\n", c.Company, tokens)
 }
 
-// CreateAttack will launch a new attack in Gremlin against one of your configured
-// clients. If the request succeeds, you will receive a UUID for the newly created
-// attack.
-func (c *Client) CreateAttack(ac AttackCommand) (string, error) {
-	rurl := c.resourceURL("attacks/new")
-
-	attackJSON, err := json.Marshal(ac)
-	if err != nil {
-		return "", fmt.Errorf("Failed to marshal attack JSON: %v", err)
-	}
-
-	req, err := http.NewRequest("POST", rurl.String(), strings.NewReader(string(attackJSON)))
-	if err != nil {
-		return "", fmt.Errorf("Failed to create request object: %v", err)
-	}
-
-	req.Header.Set("Authorization", c.token.Header)
-	req.Header.Set("Content-Type", "application/json")
-
-	bs, err := c.dispatchRequest(req)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bs), nil
-}
-
 // resourceURL safely joins a string path (e.g. "my/resource") to an existing URL.
 func (c *Client) resourceURL(path string) *url.URL {
 	rel := &url.URL{Path: path}

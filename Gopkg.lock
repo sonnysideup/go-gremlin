@@ -14,6 +14,12 @@
   revision = "62de8c46ede02a7675c4c79c84883eb164cb71e3"
 
 [[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "v1"
   name = "gopkg.in/jarcoal/httpmock.v1"
   packages = ["."]
@@ -22,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "595790889df79c8dcf39187ebfc7fdc7a60e230381322058534fb89e4210bb5e"
+  inputs-digest = "a088e1e1a7163e43eeace5b508f140ee78041ead1893379e9893a948633d5de0"
   solver-name = "gps-cdcl"
   solver-version = 1
