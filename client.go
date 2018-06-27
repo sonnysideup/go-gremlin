@@ -99,7 +99,7 @@ func (c *Client) authenticate() (*accessToken, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// dispatch request and check response status
-	bs, err := c.dispatchRequest(req)
+	bs, err := c.dispatchRequest(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +128,9 @@ func (c *Client) resourceURL(path string) *url.URL {
 }
 
 // dispatchRequest to server and return a byte slice containing the response body.
-// An error will be returned instead if the request fails for some reason.
-func (c *Client) dispatchRequest(req *http.Request) ([]byte, error) {
+// An error will be returned instead if the request fails or if the response
+// status does not match the expected one.
+func (c *Client) dispatchRequest(req *http.Request, status int) ([]byte, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Request failed: %v", err)
@@ -137,9 +138,9 @@ func (c *Client) dispatchRequest(req *http.Request) ([]byte, error) {
 
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := ioutil.ReadAll(resp.Body) // can't fail because it's reading in memory
 
-	if !(resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices) {
+	if resp.StatusCode != status {
 		return nil, fmt.Errorf("Server failed to process request: status: %d body: %s", resp.StatusCode, string(body))
 	}
 

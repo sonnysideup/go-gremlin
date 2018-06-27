@@ -37,7 +37,7 @@ func (c *Client) CreateAttack(ac AttackCommand) (*uuid.UUID, error) {
 	req.Header.Set("Authorization", c.token.Header)
 	req.Header.Set("Content-Type", "application/json")
 
-	bs, err := c.dispatchRequest(req)
+	bs, err := c.dispatchRequest(req, http.StatusCreated)
 	if err != nil {
 		return nil, err
 	}

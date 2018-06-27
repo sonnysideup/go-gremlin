@@ -58,6 +58,8 @@ func TestCreateAttackSuccess(t *testing.T) {
 	someGUID := "123e4567-e89b-12d3-a456-426655440000"
 
 	mux.HandleFunc("/attacks/new", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+
 		testMethod(t, r, "POST")
 		testHeader(t, r, "Content-Type", "application/json")
 		testHeader(t, r, "Authorization", "Bearer fake-token")
@@ -110,6 +112,7 @@ func TestCreateAttackWithBadResponse(t *testing.T) {
 	attack := buildAttack()
 
 	mux.HandleFunc("/attacks/new", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, "abc-its-easy-as-1-2-3")
 	})
 
