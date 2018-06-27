@@ -99,19 +99,14 @@ func (c *Client) authenticate() (*accessToken, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// dispatch request and check response status
-	resp, err := c.client.Do(req)
+	bs, err := c.dispatchRequest(req, http.StatusOK)
 	if err != nil {
-		return nil, fmt.Errorf("Auth request failed: %s", err.Error())
+		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Auth request failed: status: %d body: %s\n", resp.StatusCode, string(body))
-	}
-	defer resp.Body.Close()
 
 	// marshall JSON response into object
 	var tokens []accessToken
-	if err = json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+	if err := json.Unmarshal(bs, &tokens); err != nil {
 		return nil, fmt.Errorf("Failed to marshall response: %s", err.Error())
 	}
 
@@ -126,23 +121,28 @@ func (c *Client) authenticate() (*accessToken, error) {
 	return nil, fmt.Errorf("Unable to find token for '%s'\nTokens returned: %+v\n", c.Company, tokens)
 }
 
-// func (c *Client) CreateAttack(ac AttackCommand, token accessToken) error {
-// rurl := c.resourceURL("attacks/new")
-//
-// jsonBody, err := json.Marshal(&ac)
-// if err != nil {
-// 	return fmt.Errorf("Failed to marshal attack command: %v", err)
-// }
-
-// create new request
-// add headers
-// ignore response body for now
-
-// return nil
-// }
-
 // resourceURL safely joins a string path (e.g. "my/resource") to an existing URL.
 func (c *Client) resourceURL(path string) *url.URL {
 	rel := &url.URL{Path: path}
 	return c.BaseURL.ResolveReference(rel)
+}
+
+// dispatchRequest to server and return a byte slice containing the response body.
+// An error will be returned instead if the request fails or if the response
+// status does not match the expected one.
+func (c *Client) dispatchRequest(req *http.Request, status int) ([]byte, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Request failed: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body) // can't fail because it's reading in memory
+
+	if resp.StatusCode != status {
+		return nil, fmt.Errorf("Server failed to process request: status: %d body: %s", resp.StatusCode, string(body))
+	}
+
+	return body, nil
 }

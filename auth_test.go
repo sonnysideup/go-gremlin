@@ -131,7 +131,7 @@ func TestAuthenticationFailsWithWrongURL(t *testing.T) {
 	if err == nil {
 		t.Error("Expected not real domain to result in error.")
 	} else {
-		if got, want := err.Error(), "Auth request failed"; !strings.Contains(got, want) {
+		if got, want := err.Error(), "Request failed"; !strings.Contains(got, want) {
 			t.Errorf("Expected error message to contain %q, but got %q", want, got)
 		}
 	}
