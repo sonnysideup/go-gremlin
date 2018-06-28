@@ -81,7 +81,7 @@ func NewClient(company string, email string, password string, options ...ConfigO
 //
 // All other API requests require an access token so a token will be required
 // prior to invoking other methods.
-func (c *Client) authenticate() (*accessToken, error) {
+func (c *Client) Authenticate() (*accessToken, error) {
 	rurl := c.resourceURL("users/auth")
 
 	// create request body and object

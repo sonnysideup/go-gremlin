@@ -106,7 +106,7 @@ func TestAuthenticationSuccess(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	// When
-	client.authenticate()
+	client.Authenticate()
 
 	// Then
 	if got, want := client.token.Token, "fake-token"; got != want {
@@ -125,7 +125,7 @@ func TestAuthenticationFailsWithWrongURL(t *testing.T) {
 	client := NewClient(orgName, email, password, WithURL(myURL))
 
 	// When
-	_, err := client.authenticate()
+	_, err := client.Authenticate()
 
 	// Then
 	if err == nil {
@@ -150,7 +150,7 @@ func TestAuthenticationFailsWithFailedRequest(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	// When
-	_, err := client.authenticate()
+	_, err := client.Authenticate()
 
 	// Then
 	if err == nil {
@@ -174,7 +174,7 @@ func TestAuthenticationFailsWithBadResponseStructure(t *testing.T) {
 	mockBadResponseStructure(defaultURL)
 
 	// When
-	_, err := client.authenticate()
+	_, err := client.Authenticate()
 
 	// Then
 	if err == nil {
@@ -200,7 +200,7 @@ func TestAuthenticationFailsWhenTokenForOrganizationNotFound(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	// When
-	_, err := client.authenticate()
+	_, err := client.Authenticate()
 
 	// Then
 	if err == nil {
