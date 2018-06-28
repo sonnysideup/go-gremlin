@@ -109,7 +109,7 @@ func TestAuthenticationSuccess(t *testing.T) {
 	client.Authenticate()
 
 	// Then
-	if got, want := client.token.Token, "fake-token"; got != want {
+	if got, want := client.Token.Token, "fake-token"; got != want {
 		t.Errorf("Expected token to be %#v, but got %#v", want, got)
 	}
 }

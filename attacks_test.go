@@ -17,7 +17,7 @@ func setup() (mux *http.ServeMux, client *Client, teardown func()) {
 	server := httptest.NewServer(mux)
 
 	client = NewClient("Test Org", "user@domain.com", "secret", WithURL(server.URL))
-	client.token = &accessToken{Header: "Bearer fake-token"}
+	client.Token = &accessToken{Header: "Bearer fake-token"}
 
 	return mux, client, server.Close
 }
