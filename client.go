@@ -25,7 +25,7 @@ type Client struct {
 	BaseURL  *url.URL
 	Email    string
 	password string
-	token    *accessToken
+	Token    *accessToken
 }
 
 // ConfigOption represents the type interface that can be used to add new
@@ -63,7 +63,7 @@ func NewClient(company string, email string, password string, options ...ConfigO
 		BaseURL:  defaultBaseURL,
 		Email:    email,
 		password: password,
-		token:    &accessToken{},
+		Token:    &accessToken{},
 	}
 
 	// apply any functional options
@@ -113,7 +113,7 @@ func (c *Client) Authenticate() (*accessToken, error) {
 	// search for required company token
 	for _, t := range tokens {
 		if t.OrganizationName == c.Company {
-			c.token = &t
+			c.Token = &t
 			return &t, nil
 		}
 	}

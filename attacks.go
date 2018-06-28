@@ -34,7 +34,7 @@ func (c *Client) CreateAttack(ac AttackCommand) (*uuid.UUID, error) {
 		return nil, fmt.Errorf("Failed to create request object: %v", err)
 	}
 
-	req.Header.Set("Authorization", c.token.Header)
+	req.Header.Set("Authorization", c.Token.Header)
 	req.Header.Set("Content-Type", "application/json")
 
 	bs, err := c.dispatchRequest(req, http.StatusCreated)
