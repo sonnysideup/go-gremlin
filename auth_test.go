@@ -2,212 +2,175 @@ package gremlin
 
 import (
 	"net/http"
-	"strings"
-	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
-var AccessTokenBuilder = buildDefaultAccessToken()
-
 const defaultURL = "https://api.gremlin.com/v1/"
 
-// NewClient() tests
+var AccessTokenBuilder = buildDefaultAccessToken()
 
-func TestNewClientDefaults(t *testing.T) {
-	t.Log("Creating client using all defaults")
+var _ = Describe("Auth", func() {
+	Describe("NewClient", func() {
+		Context("Creating client using all defaults", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			email := "real-email@google.com"
+			password := "secure-password"
 
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	email := "real-email@google.com"
-	password := "secure-password"
+			// When
+			client := NewClient(orgName, email, password)
 
-	// When
-	client := NewClient(orgName, email, password)
+			It("should have a company", func() {
+				Expect(client.Company).To(Equal(orgName))
+			})
 
-	// Then
-	if got, want := client.Company, orgName; got != want {
-		t.Errorf("Expected company name to equal %s, but got %s", want, got)
-	}
+			It("should have a BaseURL set to the default", func() {
+				Expect(client.BaseURL.String()).To(Equal(defaultURL))
+			})
 
-	if got, want := client.BaseURL.String(), defaultURL; got != want {
-		t.Errorf("Expected BaseURL to equal %s, but got %s", want, got)
-	}
+			It("should have a default timeout of 10", func() {
+				Expect(client.client.Timeout).To(Equal(time.Second * 10))
+			})
+		})
 
-	if got, want := client.client.Timeout, time.Second*10; got != want {
-		t.Error("Inner net client incorrectly initialized")
-		t.Errorf("Expected default timeout to equal %s, but got %s", want, got)
-	}
-}
+		Context("Creating client using non-default URL", func() {
+			// Given
+			orgName := "New Co"
+			myURL := "http://sweetpuppy.io/"
+			email := "real-email@google.com"
+			password := "secure-password"
 
-func TestNewClientWithDifferentURL(t *testing.T) {
-	t.Log("Creating client with a non-default URL")
+			// When
+			client := NewClient(orgName, email, password, WithURL(myURL))
 
-	// Given
-	orgName := "New Co"
-	myURL := "http://sweetpuppy.io/"
-	email := "real-email@google.com"
-	password := "secure-password"
+			It("should have a BaseURL set to myURL", func() {
+				Expect(client.BaseURL.String()).To(Equal(myURL))
+			})
+		})
 
-	// When
-	client := NewClient(orgName, email, password, WithURL(myURL))
+		Context("Creating client with a bad URL", func() {
+			// Given
+			orgName := "New Co"
+			badURL := "://derpa.derp"
+			email := "real-email@google.com"
+			password := "secure-password"
 
-	// Then
-	if got, want := client.BaseURL.String(), myURL; got != want {
-		t.Errorf("Expected configured URL to be %s, but got %s", want, got)
-	}
-}
+			It("should cause a panic", func() {
+				defer func() {
+					Expect(recover()).NotTo(BeNil())
+				}()
+				// When
+				NewClient(orgName, email, password, WithURL(badURL))
+			})
+		})
 
-func TestNewClientWithInvalidURL(t *testing.T) {
-	t.Log("Creating client with a bad URL")
+		Context("Creating client with non-default HTTPClient", func() {
+			// Given
+			orgName := "NewCo"
+			innerClient := &http.Client{Timeout: 60}
+			email := "real-email@google.com"
+			password := "secure-password"
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected bad URL to cause panic")
-		}
-	}()
-	email := "real-email@google.com"
-	password := "secure-password"
+			// When
+			client := NewClient(orgName, email, password, WithNetClient(innerClient))
 
-	// When
-	NewClient("NewCo", email, password, WithURL("://derpa.derp"))
-}
+			It("should have a new innerClient", func() {
+				Expect(client.client).To(Equal(innerClient))
+			})
+		})
+	})
+	Describe("authenticate function", func() {
+		Context("Test successful authentication", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			email := "real-email@google.com"
+			password := "secure-password"
+			client := NewClient(orgName, email, password)
 
-func TestNewClientWithCustomInnerHTTPClient(t *testing.T) {
-	t.Log("Creating client with non-default HTTPClient")
+			accessTokenBuilt := AccessTokenBuilder.OrganizationName(orgName).Build()
+			mockSucessAuth(defaultURL, []accessToken{accessTokenBuilt})
+			defer httpmock.DeactivateAndReset()
 
-	// Given
-	orgName := "NewCo"
-	innerClient := &http.Client{Timeout: 60}
-	email := "real-email@google.com"
-	password := "secure-password"
+			// When
+			client.Authenticate()
 
-	// When
-	client := NewClient(orgName, email, password, WithNetClient(innerClient))
+			It("should get a token", func() {
+				Expect(client.Token.Token).To(Equal("fake-token"))
+			})
+		})
 
-	// Then
-	if got, want := client.client, innerClient; got != want {
-		t.Errorf("Expected HTTP client to be %#v, but got %#v", want, got)
-	}
-}
+		Context("Creating client with wrong URL", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			myURL := "http://not-real.io/"
+			email := "real-email@google.com"
+			password := "secure-password"
+			client := NewClient(orgName, email, password, WithURL(myURL))
 
-// authenticate() tests
+			// When
+			_, err := client.Authenticate()
 
-func TestAuthenticationSuccess(t *testing.T) {
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	email := "real-email@google.com"
-	password := "secure-password"
-	client := NewClient(orgName, email, password)
+			It("should cause an error to be thrown", func() {
+				Expect(err.Error()).To(ContainSubstring("Request failed"))
+			})
+		})
 
-	accessTokenBuilt := AccessTokenBuilder.OrganizationName(orgName).Build()
-	mockSucessAuth(defaultURL, []accessToken{accessTokenBuilt})
-	defer httpmock.DeactivateAndReset()
+		Context("Creating client using all defaults and receives 401 auth response", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			email := "real-email@google.com"
+			password := "secure-password"
+			client := NewClient(orgName, email, password)
 
-	// When
-	client.Authenticate()
+			mockFailAuth(defaultURL, 401)
+			defer httpmock.DeactivateAndReset()
 
-	// Then
-	if got, want := client.Token.Token, "fake-token"; got != want {
-		t.Errorf("Expected token to be %#v, but got %#v", want, got)
-	}
-}
+			// When
+			_, err := client.Authenticate()
 
-func TestAuthenticationFailsWithWrongURL(t *testing.T) {
-	t.Log("Creating client with wrong URL")
+			It("should cause an error to be thrown", func() {
+				Expect(err.Error()).To(ContainSubstring("status: 401"))
+			})
+		})
 
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	myURL := "http://not-real.io/"
-	email := "real-email@google.com"
-	password := "secure-password"
-	client := NewClient(orgName, email, password, WithURL(myURL))
+		Context("Creating client using all defaults and fails to marshal auth response", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			email := "real-email@google.com"
+			password := "secure-password"
+			client := NewClient(orgName, email, password)
 
-	// When
-	_, err := client.Authenticate()
+			mockBadResponseStructure(defaultURL)
 
-	// Then
-	if err == nil {
-		t.Error("Expected not real domain to result in error.")
-	} else {
-		if got, want := err.Error(), "Request failed"; !strings.Contains(got, want) {
-			t.Errorf("Expected error message to contain %q, but got %q", want, got)
-		}
-	}
-}
+			// When
+			_, err := client.Authenticate()
 
-func TestAuthenticationFailsWithFailedRequest(t *testing.T) {
-	t.Log("Creating client using all defaults and receives 401 auth response")
+			It("should cause an error to be thrown", func() {
+				Expect(err.Error()).To(ContainSubstring("Failed to marshall response:"))
+			})
+		})
 
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	email := "real-email@google.com"
-	password := "secure-password"
-	client := NewClient(orgName, email, password)
+		Context("Creating client using all defaults and fails to find token for organization", func() {
+			// Given
+			orgName := "Bob's Burgers, Inc."
+			email := "real-email@google.com"
+			password := "secure-password"
+			client := NewClient(orgName, email, password)
 
-	mockFailAuth(defaultURL, 401)
-	defer httpmock.DeactivateAndReset()
+			accessTokenBuilt := AccessTokenBuilder.OrganizationName("Different Org").Build()
+			mockSucessAuth(defaultURL, []accessToken{accessTokenBuilt})
+			defer httpmock.DeactivateAndReset()
 
-	// When
-	_, err := client.Authenticate()
+			// When
+			_, err := client.Authenticate()
 
-	// Then
-	if err == nil {
-		t.Error("Expected non-200 response on auth to result in error")
-	} else {
-		if got, want := err.Error(), "status: 401"; !strings.Contains(got, want) {
-			t.Errorf("Expected error message to contain %q, but got %q", want, got)
-		}
-	}
-}
-
-func TestAuthenticationFailsWithBadResponseStructure(t *testing.T) {
-	t.Log("Creating client using all defaults and fails to marshal auth response")
-
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	email := "real-email@google.com"
-	password := "secure-password"
-	client := NewClient(orgName, email, password)
-
-	mockBadResponseStructure(defaultURL)
-
-	// When
-	_, err := client.Authenticate()
-
-	// Then
-	if err == nil {
-		t.Error("Expected malformed response to result in error")
-	} else {
-		if got, want := err.Error(), "Failed to marshall response:"; !strings.Contains(got, want) {
-			t.Errorf("Expected error message to contain %q, but got %q", want, got)
-		}
-	}
-}
-
-func TestAuthenticationFailsWhenTokenForOrganizationNotFound(t *testing.T) {
-	t.Log("Creating client using all defaults and fails to find token for organization")
-
-	// Given
-	orgName := "Bob's Burgers, Inc."
-	email := "real-email@google.com"
-	password := "secure-password"
-	client := NewClient(orgName, email, password)
-
-	accessTokenBuilt := AccessTokenBuilder.OrganizationName("Different Org").Build()
-	mockSucessAuth(defaultURL, []accessToken{accessTokenBuilt})
-	defer httpmock.DeactivateAndReset()
-
-	// When
-	_, err := client.Authenticate()
-
-	// Then
-	if err == nil {
-		t.Error("Expected missing org token to result in error")
-	} else {
-		if got, want := err.Error(), "Unable to find token"; !strings.Contains(got, want) {
-			t.Errorf("Expected error message to contain %q, but got %q", want, got)
-		}
-	}
-}
+			It("should cause an error to be thrown", func() {
+				Expect(err.Error()).To(ContainSubstring("Unable to find token"))
+			})
+		})
+	})
+})
